@@ -310,7 +310,7 @@ const changeCurrentPassword=asyncHandler(async(req,res)=>{
 
 const getCurrentUser=asyncHandler(async(req,res)=>{
   return res.status(200)
-  .json(200,req.user,"current user fetched successfully")
+  .json(new ApiResponse(200,req.user,"current user fetched successfully"))
 })
 // text based data update
 const updateAccountDetails=asyncHandler(async(req,res)=>{
@@ -403,6 +403,84 @@ const updateUserCoverImage=asyncHandler(async(req,res)=>{
   ))
 })
 
+const getUserChannelProfile=asyncHandler(async(req,res)=>{
+ const {username}= req.params //url se req nikalenge
+ if(!username?.trim()){ //ho skta h params empty ho
+  throw new ApiError(400,"username is missing")
+ }
+ //username se pehle document find kr lete hain
+ const channel=await User.aggregate[
+  {
+    //1st pipeline
+    //match field kaise match kre
+    $match:{
+      username:username?.toLowerCase()
+    }
+  },
+  {
+    //mere kitne subscriber hain
+    $lookup:{
+      from:"subscriptions", //DB me plural me
+      localField:"_id",
+      foreignField:"channel",
+      as:"subscribers"
+
+    }
+  },
+  {
+    //maine kitne subscribe kiya h
+    $lookup:{
+      from:"subscriptions", //DB me plural me
+      localField:"_id",
+      foreignField:"subscriber",
+      as:"subscribedTo"
+    }
+  },
+  {
+    $addFields:{
+      subscribersCount:{
+        $size:"$subscribers"
+      },
+      channelsSubscribedToCount:{
+        $size:"$subscribedTo"
+      },
+      isSubscribed:{
+        $cond:{
+          if:{$in:[req.user?._id,"$subscribers.subscriber"]},
+          then:true,
+          else:false
+        }
+      }
+    }
+  },
+  {
+    $project:{ //selected chize dunga
+      fullName:1, //flag on
+      username:1,
+      subscribersCount:1,
+      channelsSubscribedToCount:1,
+      isSubscribed:1,
+      avatar:1,
+      coverImage:1
+
+
+
+    }
+  }
+ ]
+ if(!channel?.length){
+  throw new ApiError(404,"channel does not exist")
+ }
+
+ return res
+ .status(200)
+ .json(
+  new ApiResponse(200,channel[0],"User channel fetched successfully")
+ )
+
+})
+
+
 
 
 
@@ -414,5 +492,6 @@ export {registerUser,
   getCurrentUser,
   updateAccountDetails,
   updateUserAvatar,
-  updateUserCoverImage
+  updateUserCoverImage,
+  getUserChannelProfile
 }

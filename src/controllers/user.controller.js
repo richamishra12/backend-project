@@ -266,7 +266,7 @@ const {accessToken,newRefreshToken}=await generateAccessAndRefereshTokens(user._
 return res
 .status(200)
 .cookie("accessToken",accessToken,options)
-.cookie("refreshToken",refreshToken,options)
+.cookie("refreshToken",newRefreshToken,options)
 .json(
   new ApiResponse(
     200,
@@ -278,7 +278,7 @@ return res
 
 
  }catch(error){
-  throw new ApiError(401,error?.message) || "invalid refresh token"
+  throw new ApiError(401,error?.message || "invalid refresh token")
 
 
  }
